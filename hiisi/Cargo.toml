@@ -9,5 +9,5 @@ clap = { version = "4.5.21", features = ["derive"] }
 nix = "0.29.0"
 ron = "0.8.1"
 serde = { version = "1.0.215", features = ["derive"] }
-tokio = { version = "1.41.1", features = ["full"] }
+tokio = { version = "1.41.1", features = ["full", "io-std", "io-util", "net"] }
 tracing = "0.1.41"
