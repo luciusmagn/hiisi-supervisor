@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::fmt;
 use std::path::PathBuf;
 use std::time::Duration;
 
@@ -36,6 +37,23 @@ pub struct Message {
     pub user: String,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ProcessStatus {
+    Running,
+    Exited(i32),    // Exit code if we have it
+    Failed(String), // Error message if process failed to start/crashed
+}
+
+impl fmt::Display for ProcessStatus {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Running => write!(f, "running"),
+            Self::Exited(num) => write!(f, "exited({num})"),
+            Self::Failed(err) => write!(f, "failed({err})"),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ProcessInfo {
     pub id: u32,
@@ -43,6 +61,7 @@ pub struct ProcessInfo {
     pub uptime: Duration,
     pub cwd: PathBuf,
     pub cmd: String,
+    pub status: ProcessStatus,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

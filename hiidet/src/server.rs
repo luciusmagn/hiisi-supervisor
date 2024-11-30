@@ -229,7 +229,7 @@ async fn handle_message(
         }
 
         Command::Status => {
-            let state = state.lock().await;
+            let mut state = state.lock().await;
             Response::Ok(ResponseData::Status(
                 state.list_processes(),
             ))

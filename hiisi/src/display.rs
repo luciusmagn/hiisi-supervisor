@@ -1,6 +1,6 @@
 use hiisi_common::protocol::{PortInfo, ProcessInfo};
 use std::time::Duration;
-use tabled::{Table, Tabled};
+use tabled::{settings::Style, Table, Tabled};
 
 #[derive(Tabled)]
 struct ProcessRow {
@@ -8,6 +8,8 @@ struct ProcessRow {
     id: u32,
     #[tabled(rename = "USER")]
     user: String,
+    #[tabled(rename = "STATUS")]
+    status: String,
     #[tabled(rename = "UPTIME")]
     uptime: String,
     #[tabled(rename = "CWD")]
@@ -50,10 +52,13 @@ pub fn format_processes(processes: &[ProcessInfo]) -> String {
             uptime: format_duration(p.uptime),
             cwd: p.cwd.to_string_lossy().into_owned(),
             cmd: p.cmd.clone(),
+            status: p.status.to_string(),
         })
         .collect();
 
-    Table::new(rows).to_string()
+    let mut table = Table::new(rows);
+    table.with(Style::modern());
+    table.to_string()
 }
 
 pub fn format_ports(ports: &[PortInfo]) -> String {
@@ -71,7 +76,9 @@ pub fn format_ports(ports: &[PortInfo]) -> String {
         })
         .collect();
 
-    Table::new(rows).to_string()
+    let mut table = Table::new(rows);
+    table.with(Style::modern());
+    table.to_string()
 }
 
 pub fn format_error(err: &str) -> String {

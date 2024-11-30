@@ -1,4 +1,4 @@
-use hiisi_common::protocol::ProcessInfo;
+use hiisi_common::protocol::{ProcessInfo, ProcessStatus};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
@@ -18,7 +18,15 @@ pub struct Process {
 }
 
 impl Process {
-    pub fn to_info(&self) -> ProcessInfo {
+    pub fn to_info(&mut self) -> ProcessInfo {
+        let status = match self.child.try_wait() {
+            Ok(Some(status)) => ProcessStatus::Exited(
+                status.code().unwrap_or(-1),
+            ),
+            Ok(None) => ProcessStatus::Running,
+            Err(e) => ProcessStatus::Failed(e.to_string()),
+        };
+
         ProcessInfo {
             id: self.id,
             user: self.user.clone(),
@@ -27,6 +35,7 @@ impl Process {
                 .unwrap_or(Duration::from_secs(0)),
             cwd: self.cwd.clone(),
             cmd: self.cmd.clone(),
+            status,
         }
     }
 }
@@ -63,7 +72,10 @@ impl State {
         self.processes.get(&id)
     }
 
-    pub fn list_processes(&self) -> Vec<ProcessInfo> {
-        self.processes.values().map(Process::to_info).collect()
+    pub fn list_processes(&mut self) -> Vec<ProcessInfo> {
+        self.processes
+            .values_mut()
+            .map(Process::to_info)
+            .collect()
     }
 }
