@@ -43,13 +43,7 @@ impl Server {
                         match process.child.try_wait() {
                             Ok(Some(_)) => {
                                 // Process exited, needs restart
-                                to_restart.push((
-                                    process.id,
-                                    process.user.clone(),
-                                    process.cmd.clone(),
-                                    process.cwd.clone(),
-                                    std::env::vars().collect(),
-                                ));
+                                to_restart.push(process.id);
                             }
                             Ok(None) => (), // Still running
                             Err(e) => tracing::error!(
@@ -62,9 +56,16 @@ impl Server {
                 }
 
                 // Restart processes that died
-                for (id, user, cmd, cwd, env) in to_restart {
+                for id in to_restart {
+                    let old_process =
+                        state.processes.get(&id).unwrap();
                     match spawn_process(
-                        id, user, cmd, cwd, env, true,
+                        id,
+                        old_process.user.clone(),
+                        old_process.cmd.clone(),
+                        old_process.cwd.clone(),
+                        old_process.env.clone(),
+                        true,
                     )
                     .await
                     {
@@ -87,6 +88,18 @@ impl Server {
             }
         });
 
+        // Start port state saving task
+        let ports = server.ports.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(
+                    std::time::Duration::from_secs(30),
+                )
+                .await;
+                ports.lock().await.check_save();
+            }
+        });
+
         server
     }
 
@@ -99,18 +112,6 @@ impl Server {
         }
 
         let listener = UnixListener::bind(socket_path)?;
-
-        // Start port state saving task
-        let ports = self.ports.clone();
-        tokio::spawn(async move {
-            loop {
-                tokio::time::sleep(
-                    std::time::Duration::from_secs(30),
-                )
-                .await;
-                ports.lock().await.check_save();
-            }
-        });
 
         loop {
             let (socket, _) = listener.accept().await?;
