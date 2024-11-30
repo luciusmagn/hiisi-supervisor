@@ -54,7 +54,7 @@ pub async fn spawn_process(
     let child = Command::new(program)
         .args(args)
         .current_dir(&cwd)
-        .envs(env)
+        .envs(env.clone())
         .stdout(stdout_file)
         .stderr(stderr_file)
         // Run as the specified user
@@ -71,6 +71,7 @@ pub async fn spawn_process(
         child,
         stdout_path,
         stderr_path,
+        env,
     })
 }
 

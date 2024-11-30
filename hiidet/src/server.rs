@@ -20,11 +20,74 @@ pub struct Server {
 
 impl Server {
     pub fn new() -> Self {
-        Self {
+        let server = Self {
             state: Arc::new(Mutex::new(State::new())),
             ports: Arc::new(Mutex::new(PortState::load())),
             monitor: Arc::new(Mutex::new(SystemMonitor::new())),
-        }
+        };
+
+        // Start process monitoring task
+        let state = server.state.clone();
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(
+                    std::time::Duration::from_secs(1),
+                )
+                .await;
+                let mut state = state.lock().await;
+
+                // Check all processes
+                let mut to_restart = Vec::new();
+                for process in state.processes.values_mut() {
+                    if process.restart {
+                        match process.child.try_wait() {
+                            Ok(Some(_)) => {
+                                // Process exited, needs restart
+                                to_restart.push((
+                                    process.id,
+                                    process.user.clone(),
+                                    process.cmd.clone(),
+                                    process.cwd.clone(),
+                                    std::env::vars().collect(),
+                                ));
+                            }
+                            Ok(None) => (), // Still running
+                            Err(e) => tracing::error!(
+                                "Error checking process {}: {}",
+                                process.id,
+                                e
+                            ),
+                        }
+                    }
+                }
+
+                // Restart processes that died
+                for (id, user, cmd, cwd, env) in to_restart {
+                    match spawn_process(
+                        id, user, cmd, cwd, env, true,
+                    )
+                    .await
+                    {
+                        Ok(new_process) => {
+                            state
+                                .processes
+                                .insert(id, new_process);
+                            tracing::info!(
+                                "Restarted process {}",
+                                id
+                            );
+                        }
+                        Err(e) => tracing::error!(
+                            "Failed to restart process {}: {}",
+                            id,
+                            e
+                        ),
+                    }
+                }
+            }
+        });
+
+        server
     }
 
     pub async fn run(

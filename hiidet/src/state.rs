@@ -14,6 +14,7 @@ pub struct Process {
     pub child: Child,
     pub stdout_path: PathBuf,
     pub stderr_path: PathBuf,
+    pub env: HashMap<String, String>,
 }
 
 impl Process {
