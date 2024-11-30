@@ -1,0 +1,13 @@
+[profile.dev]
+opt-level = 0
+debug = true
+incremental = true
+codegen-units = 256
+
+[workspace]
+resolver = "2"
+members = [
+    "hiisi",
+    "hiisi-common",
+    "hiidet",
+]
