@@ -17,6 +17,31 @@ impl From<io::Error> for FrameError {
     }
 }
 
+impl std::fmt::Display for FrameError {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        match self {
+            FrameError::Io(e) => write!(f, "IO error: {}", e),
+            FrameError::TooLarge(size) => {
+                write!(f, "Frame too large: {} bytes", size)
+            }
+        }
+    }
+}
+
+impl std::error::Error for FrameError {
+    fn source(
+        &self,
+    ) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            FrameError::Io(e) => Some(e),
+            FrameError::TooLarge(_) => None,
+        }
+    }
+}
+
 pub async fn write_frame<W, T>(
     writer: &mut W,
     value: &T,

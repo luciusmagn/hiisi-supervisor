@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use sysinfo::{CpuExt, PidExt, ProcessExt, System, SystemExt};
+use sysinfo::System;
 
 pub struct SystemMonitor {
     sys: System,
@@ -35,7 +35,7 @@ impl SystemMonitor {
             self.last_update = std::time::Instant::now();
         }
 
-        let total_cpu = self.sys.global_cpu_info().cpu_usage();
+        let total_cpu = self.sys.global_cpu_usage();
 
         let total_memory_kb = self.sys.total_memory();
         let used_memory_kb = self.sys.used_memory();
@@ -45,10 +45,13 @@ impl SystemMonitor {
             .processes()
             .iter()
             .map(|(pid, process)| {
-                (pid.as_u32(), ProcessStats {
-                    cpu_usage: process.cpu_usage(),
-                    memory_kb: process.memory(),
-                })
+                (
+                    pid.as_u32(),
+                    ProcessStats {
+                        cpu_usage: process.cpu_usage(),
+                        memory_kb: process.memory(),
+                    },
+                )
             })
             .collect();
 

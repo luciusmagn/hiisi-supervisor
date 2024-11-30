@@ -1,5 +1,7 @@
 use hiisi_common::frame::{read_frame, write_frame};
-use hiisi_common::protocol::{Message, Response, ResponseData};
+use hiisi_common::protocol::{
+    Command, Message, Response, ResponseData,
+};
 use std::path::Path;
 use std::sync::Arc;
 use tokio::net::UnixListener;

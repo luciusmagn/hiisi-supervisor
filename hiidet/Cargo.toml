@@ -6,8 +6,15 @@ edition = "2024"
 [dependencies]
 chrono = "0.4.38"
 clap = { version = "4.5.21", features = ["derive"] }
+ctrlc = "3.4.5"
 hiisi-common = { version = "0.1.0", path = "../hiisi-common" }
-nix = "0.29.0"
+nix = { version = "0.29.0", features = ["user"] }
+rand = "0.8.5"
 ron = "0.8.1"
+serde = { version = "1.0.215", features = ["derive"] }
+slug = "0.1.6"
+sysinfo = "0.32.1"
 tokio = { version = "1.41.1", features = ["full"] }
 tracing = "0.1.41"
+tracing-subscriber = "0.3.19"
+users = "0.11.0"

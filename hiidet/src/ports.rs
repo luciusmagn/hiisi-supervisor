@@ -2,7 +2,6 @@ use hiisi_common::protocol::PortInfo;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::path::PathBuf;
 use std::time::{Duration, SystemTime};
 
 const MIN_PORT: u16 = 1024;
@@ -19,7 +18,7 @@ pub struct PortAllocation {
 pub struct PortState {
     allocations: HashMap<u16, PortAllocation>,
     #[serde(skip)]
-    last_save: SystemTime,
+    last_save: Option<SystemTime>,
 }
 
 impl PortState {
@@ -35,13 +34,14 @@ impl PortState {
     }
 
     pub fn check_save(&mut self) {
-        if SystemTime::now()
-            .duration_since(self.last_save)
-            .unwrap_or_default()
-            >= SAVE_INTERVAL
+        let now = SystemTime::now();
+        if self
+            .last_save
+            .and_then(|t| now.duration_since(t).ok())
+            .map_or(true, |d| d >= SAVE_INTERVAL)
         {
             self.save();
-            self.last_save = SystemTime::now();
+            self.last_save = Some(now);
         }
     }
 
@@ -61,10 +61,13 @@ impl PortState {
     }
 
     fn allocate_specific(&mut self, user: String, port: u16) {
-        self.allocations.insert(port, PortAllocation {
-            user,
-            allocated_at: SystemTime::now(),
-        });
+        self.allocations.insert(
+            port,
+            PortAllocation {
+                user,
+                allocated_at: SystemTime::now(),
+            },
+        );
     }
 
     fn allocate_random(&mut self, user: String) -> Option<u16> {
@@ -99,7 +102,7 @@ impl PortState {
                 port,
                 user: alloc.user.clone(),
                 active: false, // TODO: implement port activity check
-                allocated_at: alloc.allocated_at,
+                allocated_at: alloc.allocated_at.into(),
             })
             .collect()
     }

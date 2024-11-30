@@ -85,7 +85,7 @@ pub async fn stop_process(
         _ = process.child.wait() => Ok(()),
         _ = tokio::time::sleep(std::time::Duration::from_secs(15)) => {
             // Try SIGTERM
-            process.child.kill()?;
+            process.child.kill().await?;
 
             // Wait another 15 seconds
             tokio::select! {

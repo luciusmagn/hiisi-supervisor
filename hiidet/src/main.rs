@@ -6,6 +6,7 @@ mod state;
 
 use server::Server;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tracing::{error, info};
 
 #[tokio::main]
@@ -27,19 +28,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create socket directory if it doesn't exist
     std::fs::create_dir_all("/run/hiisi")?;
 
-    let socket_path = PathBuf::from("/run/hiisi/hiisi.sock");
+    let socket_path =
+        Arc::new(PathBuf::from("/run/hiisi/hiisi.sock"));
+    let socket_path_cleanup = Arc::clone(&socket_path);
     let server = Server::new();
 
     // Handle SIGTERM gracefully
     let (tx, rx) = tokio::sync::oneshot::channel();
-    ctrlc::set_handler(move || {
-        tx.send(()).ok();
+    ctrlc::set_handler({
+        let tx = std::sync::Mutex::new(Some(tx));
+        move || {
+            if let Some(tx) = tx.lock().unwrap().take() {
+                tx.send(()).ok();
+            }
+        }
     })?;
 
     // Run server in background task
-    let server_handle = tokio::spawn(async move {
-        if let Err(e) = server.run(&socket_path).await {
-            error!("Server error: {}", e);
+    let server_handle = tokio::spawn({
+        let socket_path = Arc::clone(&socket_path);
+        async move {
+            if let Err(e) = server.run(&socket_path).await {
+                error!("Server error: {}", e);
+            }
         }
     });
 
@@ -49,8 +60,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Clean up
     server_handle.abort();
-    if socket_path.exists() {
-        std::fs::remove_file(socket_path)?;
+    if socket_path_cleanup.exists() {
+        std::fs::remove_file(&*socket_path_cleanup)?;
     }
 
     info!("Daemon stopped");
