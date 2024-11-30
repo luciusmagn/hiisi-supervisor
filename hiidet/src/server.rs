@@ -2,8 +2,11 @@ use hiisi_common::frame::{read_frame, write_frame};
 use hiisi_common::protocol::{
     Command, Message, Response, ResponseData,
 };
+
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::sync::Arc;
+
 use tokio::net::UnixListener;
 use tokio::sync::Mutex;
 
@@ -112,6 +115,10 @@ impl Server {
         }
 
         let listener = UnixListener::bind(socket_path)?;
+        std::fs::set_permissions(
+            socket_path,
+            std::fs::Permissions::from_mode(0o777),
+        )?;
 
         loop {
             let (socket, _) = listener.accept().await?;
