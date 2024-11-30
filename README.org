@@ -1,0 +1,123 @@
+#+TITLE: Hiisi - Process & Port Manager
+#+AUTHOR: Lukáš Hozda
+#+DATE: 2024
+
+* About
+Hiisi (named after forest spirits) is a daemon-based process and port management
+system designed specifically for the velho server and its trusted users. It allows
+unprivileged users to:
+- Run background processes persistently
+- Manage their own services
+- Allocate and manage ports
+- Monitor their processes
+
+** Design Philosophy
+- Trust-based port allocation (no real security!)
+- Simple Unix socket communication
+- User isolation (processes run as requesting user)
+- Clear process ownership and management
+
+Note: This is not a security-focused tool. It assumes users are trusted and
+won't attempt to abuse the system. Perfect for small, trusted communities :-)
+
+* Architecture
+** Components
+- =hiidet= :: The daemon (runs as root)
+- =hiisi= :: User CLI tool
+- =hiisi-common= :: Shared protocol definitions
+
+** Communication
+- Unix socket at =/run/hiisi/hiisi.sock=
+- JSON-based protocol with length-prefixed frames
+- Async I/O using tokio
+
+** Process Management
+- Each process has unique ID
+- Stdout/stderr captured to =/home/user/.logs/=
+- Optional auto-restart capability
+- Graceful shutdown (SIGINT → SIGTERM → SIGKILL)
+
+** Port Management
+- Range: 1024-65535
+- Persistent allocations via RON file
+- Trust-based (no technical restrictions)
+
+* Usage
+** Running Processes
+#+begin_example
+# Start process (current env and cwd preserved)
+hiisi run ./my_server --port 8080
+
+# Start with auto-restart
+hiisi run --restart ./my_server --port 8080
+
+# List running processes
+hiisi status
+
+# View process logs
+hiisi logs <id>
+
+# Stop process
+hiisi stop <id>
+#+end_example
+
+** Managing Ports
+#+begin_example
+# Allocate random port
+hiisi port allocate
+
+# Allocate specific port
+hiisi port allocate 8080
+
+# List allocated ports
+hiisi port lookup
+
+# List ports for specific user
+hiisi port lookup username
+
+# Free port
+hiisi port free 8080
+#+end_example
+
+* Installation
+** Requirements
+- Rust toolchain
+- Linux system
+- Root access (for daemon)
+
+** Building
+#+begin_example
+cargo build --release
+#+end_example
+
+** Installation
+#+begin_example
+# Install binaries
+install -m755 target/release/hiidet /usr/sbin/
+install -m755 target/release/hiisi /usr/bin/
+
+# Create required directories
+mkdir -p /run/hiisi
+mkdir -p /etc/hiisi
+#+end_example
+
+* TODO [0/2]
+- [ ] Export monitoring metrics via HTTP endpoint
+ - System-wide metrics
+ - Per-user metrics
+ - Process-specific metrics
+- [ ] Implement port usage detection
+ - Regular checks if allocated ports are being used
+ - Garbage collection of unused port allocations
+
+* License
+#+begin_example
+Fair License
+
+Copyright © 2024 Lukáš Hozda
+
+Usage of the works is permitted provided that this instrument is retained with
+the works, so that any entity that uses the works is notified of this instrument.
+
+DISCLAIMER: THE WORKS ARE WITHOUT WARRANTY.
+#+end_example
